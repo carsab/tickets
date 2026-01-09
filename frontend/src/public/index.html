@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Desk Mini - Sistema de Tickets</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+            margin-bottom: 1.5rem;
+        }
+        
+        .badge-prioridad-alta { background-color: var(--danger-color); }
+        .badge-prioridad-media { background-color: var(--warning-color); color: #000; }
+        .badge-prioridad-baja { background-color: #6c757d; }
+        
+        .badge-estado-abierto { background-color: #0dcaf0; }
+        .badge-estado-en-progreso { background-color: #fd7e14; }
+        .badge-estado-resuelto { background-color: var(--success-color); }
+        .badge-estado-cerrado { background-color: #6c757d; }
+        
+        .ticket-item {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .ticket-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,.1);
+        }
+        
+        .stat-card {
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .comentario-item {
+            border-left: 3px solid var(--primary-color);
+            padding-left: 15px;
+        }
+        
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .loading.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading" id="loadingOverlay">
+        <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-headset"></i> Help Desk Mini
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="mostrarSeccion('dashboard')">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="mostrarSeccion('tickets')">
+                            <i class="bi bi-ticket-perforated"></i> Tickets
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="mostrarSeccion('crear')">
+                            <i class="bi bi-plus-circle"></i> Nuevo Ticket
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Sección Dashboard -->
+        <div id="seccionDashboard" class="seccion">
+            <div class="row mb-4">
+                <div class="col">
+                    <h2><i class="bi bi-speedometer2"></i> Resumen Diario</h2>
+                </div>
+            </div>
+
+            <div class="row" id="resumenDiario">
+                <div class="col-md-4">
+                    <div class="card stat-card">
+                        <div class="card-body">
+                            <h6 class="text-muted">Tickets Creados Hoy</h6>
+                            <h2 class="mb-0" id="ticketsCreadosHoy">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card" style="border-left-color: var(--success-color);">
+                        <div class="card-body">
+                            <h6 class="text-muted">Tickets Resueltos Hoy</h6>
+                            <h2 class="mb-0 text-success" id="ticketsResueltosHoy">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card" style="border-left-color: var(--warning-color);">
+                        <div class="card-body">
+                            <h6 class="text-muted">Categorías Más Solicitadas</h6>
+                            <div id="topCategorias"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Tickets -->
+        <div id="seccionTickets" class="seccion" style="display: none;">
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <h2><i class="bi bi-ticket-perforated"></i> Listado de Tickets</h2>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-primary" onclick="mostrarSeccion('crear')">
+                        <i class="bi bi-plus-circle"></i> Nuevo Ticket
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" id="filtroEstado">
+                                <option value="">Todos</option>
+                                <option value="Abierto">Abierto</option>
+                                <option value="En Progreso">En Progreso</option>
+                                <option value="Resuelto">Resuelto</option>
+                                <option value="Cerrado">Cerrado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Categoría</label>
+                            <select class="form-select" id="filtroCategoria">
+                                <option value="">Todas</option>
+                                <option value="Hardware">Hardware</option>
+                                <option value="Software">Software</option>
+                                <option value="Red">Red</option>
+                                <option value="Acceso">Acceso</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <button class="btn btn-primary w-100" onclick="cargarTickets()">
+                                <i class="bi bi-funnel"></i> Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Tickets -->
+            <div id="listaTickets" class="row"></div>
+
+            <!-- Paginación -->
+            <nav>
+                <ul class="pagination justify-content-center" id="paginacion"></ul>
+            </nav>
+        </div>
+
+        <!-- Sección Crear Ticket -->
+        <div id="seccionCrear" class="seccion" style="display: none;">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Crear Nuevo Ticket</h4>
+                        </div>
+                        <div class="card-body">
+                            <form id="formCrearTicket" onsubmit="crearTicket(event)">
+                                <div class="mb-3">
+                                    <label class="form-label">Título *</label>
+                                    <input type="text" class="form-control" id="titulo" required 
+                                           minlength="5" maxlength="120" 
+                                           placeholder="Breve descripción del problema">
+                                    <div class="form-text">Entre 5 y 120 caracteres</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Descripción *</label>
+                                    <textarea class="form-control" id="descripcion" rows="4" required 
+                                              minlength="10" maxlength="2000"
+                                              placeholder="Describa detalladamente el problema o solicitud"></textarea>
+                                    <div class="form-text">Entre 10 y 2000 caracteres</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Solicitante *</label>
+                                    <input type="text" class="form-control" id="solicitante" required 
+                                           placeholder="Nombre del solicitante">
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Categoría *</label>
+                                        <select class="form-select" id="categoria" required>
+                                            <option value="">Seleccione...</option>
+                                            <option value="Hardware">Hardware</option>
+                                            <option value="Software">Software</option>
+                                            <option value="Red">Red</option>
+                                            <option value="Acceso">Acceso</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Prioridad *</label>
+                                        <select class="form-select" id="prioridad" required>
+                                            <option value="">Seleccione...</option>
+                                            <option value="Baja">Baja</option>
+                                            <option value="Media">Media</option>
+                                            <option value="Alta">Alta</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-secondary" onclick="mostrarSeccion('tickets')">
+                                        <i class="bi bi-x-circle"></i> Cancelar
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle"></i> Crear Ticket
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Detalle de Ticket -->
+        <div id="seccionDetalle" class="seccion" style="display: none;">
+            <div class="row">
+                <div class="col-md-8">
+                    <button class="btn btn-outline-secondary mb-3" onclick="mostrarSeccion('tickets')">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </button>
+
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h4 id="detalletitulo" class="mb-1"></h4>
+                                    <small class="text-muted">ID: <span id="detalleId"></span></small>
+                                </div>
+                                <div>
+                                    <span id="detallePrioridad" class="badge"></span>
+                                    <span id="detalleEstado" class="badge"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p id="detalleDescripcion"></p>
+
+                            <hr>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Solicitante:</strong> <span id="detalleSolicitante"></span></p>
+                                    <p><strong>Categoría:</strong> <span id="detalleCategoria"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Creado:</strong> <span id="detalleFechaCreacion"></span></p>
+                                    <p><strong>Actualizado:</strong> <span id="detalleFechaActualizacion"></span></p>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <h5>Cambiar Estado</h5>
+                            <div class="input-group">
+                                <select class="form-select" id="nuevoEstado">
+                                    <option value="Abierto">Abierto</option>
+                                    <option value="En Progreso">En Progreso</option>
+                                    <option value="Resuelto">Resuelto</option>
+                                    <option value="Cerrado">Cerrado</option>
+                                </select>
+                                <button class="btn btn-primary" onclick="cambiarEstado()">
+                                    <i class="bi bi-arrow-repeat"></i> Cambiar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comentarios -->
+                    <div class="card mt-3">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Comentarios</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="listaComentarios" class="mb-3"></div>
+
+                            <h6>Agregar Comentario</h6>
+                            <form onsubmit="agregarComentario(event)">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control" id="autorComentario" 
+                                           placeholder="Tu nombre" required>
+                                </div>
+                                <div class="mb-3">
+                                    <textarea class="form-control" id="textoComentario" rows="3" 
+                                              placeholder="Escribe tu comentario..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-send"></i> Enviar Comentario
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    
+    <script src="app.js"></script>
+</body>
+</html>
