@@ -1,6 +1,8 @@
 package com.soporteagil.helpdesk.entity;
 
 
+import com.soporteagil.helpdesk.converter.EstadoConverter;
+import com.soporteagil.helpdesk.converter.PrioridadConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -42,11 +44,11 @@ public class Ticket {
     private String categoria;
     
     @NotNull(message = "La prioridad es obligatoria")
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PrioridadConverter.class)
     @Column(nullable = false, length = 10)
     private Prioridad prioridad;
     
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = EstadoConverter.class)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private Estado estado = Estado.ABIERTO;
