@@ -29,9 +29,11 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     Long countTicketsCreadosHoy();
     
     // Contar tickets con estados abiertos o en progreso por categoría (Top 3)
+    // Nota: Los estados se guardan con formato "Abierto", "En Progreso" (primera letra mayúscula)
     @Query("SELECT t.categoria AS categoria, COUNT(t) AS cantidad " +
            "FROM Ticket t " +
-           "WHERE t.estado IN ('ABIERTO', 'EN_PROGRESO') " +
+           "WHERE t.estado IN (com.soporteagil.helpdesk.entity.Ticket$Estado.ABIERTO, " +
+           "com.soporteagil.helpdesk.entity.Ticket$Estado.EN_PROGRESO) " +
            "GROUP BY t.categoria " +
            "ORDER BY COUNT(t) DESC")
     List<Object[]> findTop3CategoriasConTicketsAbiertos(Pageable pageable);
