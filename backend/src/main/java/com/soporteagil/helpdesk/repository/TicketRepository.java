@@ -23,9 +23,9 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
                                 @Param("categoria") String categoria,
                                 Pageable pageable);
     
-    // Contar tickets creados hoy
-    @Query("SELECT COUNT(t) FROM Ticket t WHERE " +
-           "CAST(t.fechaCreacion AS date) = CAST(CURRENT_TIMESTAMP AS date)")
+    // Contar tickets creados hoy (usando consulta nativa para Oracle)
+    @Query(value = "SELECT COUNT(*) FROM tickets WHERE TRUNC(fecha_creacion) = TRUNC(SYSDATE)",
+           nativeQuery = true)
     Long countTicketsCreadosHoy();
     
     // Contar tickets con estados abiertos o en progreso por categoría (Top 3)

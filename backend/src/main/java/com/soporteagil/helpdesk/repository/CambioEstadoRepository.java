@@ -11,9 +11,8 @@ public interface CambioEstadoRepository extends JpaRepository<CambioEstado, Long
     
     List<CambioEstado> findByTicketTicketIdOrderByFechaCambioDesc(Long ticketId);
     
-    // Contar tickets resueltos hoy
-    @Query("SELECT COUNT(c) FROM CambioEstado c WHERE " +
-           "c.estadoNuevo = 'Resuelto' AND " +
-           "CAST(c.fechaCambio AS date) = CAST(CURRENT_TIMESTAMP AS date)")
+    // Contar tickets resueltos hoy (usando consulta nativa para Oracle)
+    @Query(value = "SELECT COUNT(*) FROM cambios_estado WHERE estado_nuevo = 'Resuelto' AND TRUNC(fecha_cambio) = TRUNC(SYSDATE)",
+           nativeQuery = true)
     Long countTicketsResueltosHoy();
 }
